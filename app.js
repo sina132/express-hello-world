@@ -91,7 +91,7 @@ app.post("/addmsgs", upload.single("media"), async (req, res) => {
                 senderId: user.username,
                 recipientId: req.body.recipientId,  
                 content: req.body.content,  
-                mediaUrl: req.file ? `http://localhost:3000/uploads/${req.file.filename}` : null
+                mediaUrl: req.file ? `https://express-hello-world-1-hrg7.onrender.com/uploads/${req.file.filename}` : null
             });  
             await newMsg.save();
             
