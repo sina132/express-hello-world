@@ -1,13 +1,19 @@
-import express from 'express';  
-import cors from 'cors';
 
-import multer from 'multer';  
-import mongoose from 'mongoose';
+const express = require("express");
 
-import path from 'path';  
-import { fileURLToPath } from 'url';
+const cors = require("cors");
 
-import jwt from 'jsonwebtoken' 
+
+const multer = require("multer");
+
+const mongoose = require("mongoose");
+
+
+const path = require("path");
+
+const { fileURLToPath } = require("url");
+
+const jwt = require('jsonwebtoken');
 
 // Get the current filename and directory name  
 const __filename = fileURLToPath(import.meta.url);  /////////
