@@ -8,16 +8,10 @@ const multer = require("multer");
 
 const mongoose = require("mongoose");
 
-
-const path = require("path");
-
-const { fileURLToPath } = require("url");
-
 const jwt = require('jsonwebtoken');
 
-// Get the current filename and directory name  
-const __filename = fileURLToPath(import.meta.url);  /////////
-const __dirname = path.dirname(__filename);////////////
+const path = require('path');
+
 
 const app = express();  
 const PORT = process.env.PORT || 3000;  
