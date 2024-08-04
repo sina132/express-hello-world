@@ -1,62 +1,130 @@
-const express = require("express");
-const app = express();
-const port = process.env.PORT || 3001;
+import express from 'express';  
+import cors from 'cors';
 
-app.get("/", (req, res) => res.type('html').send(html));
-app.get("/api", (req,res) => res.send("api page?"));
+import multer from 'multer';  
+import mongoose from 'mongoose';
 
-const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+import path from 'path';  
+import { fileURLToPath } from 'url';
 
-server.keepAliveTimeout = 120 * 1000;
-server.headersTimeout = 120 * 1000;
+import jwt from 'jsonwebtoken' 
 
-const html = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>title!</title>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-    <script>
-      setTimeout(() => {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          disableForReducedMotion: true
+// Get the current filename and directory name  
+const __filename = fileURLToPath(import.meta.url);  /////////
+const __dirname = path.dirname(__filename);////////////
+
+const app = express();  
+const PORT = process.env.PORT || 3000;  
+app.listen(PORT, () => console.log(`Running on port ${PORT}`));  
+
+app.use(express.json());  
+app.use(cors());  
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Setup multer for file uploads//////////// 
+const storage = multer.diskStorage({  
+    destination: (req, file, cb) => {  
+        cb(null, 'uploads/'); // directory to save the uploaded files  
+    },  
+    filename: (req, file, cb) => {  
+        cb(null, file.originalname); // retain the original file name  
+    },  
+});  
+const upload = multer({ storage });  
+
+mongoose.connect("mongodb+srv://galbador:13841384@cluster0.zmxjift.mongodb.net/").then(() => console.log("Connected to Database"));  
+const msgSchema = new mongoose.Schema({  
+    senderId: { type: String, required: true },  
+    recipientId: { type: String, required: true },  
+    content: { type: String},  
+    mediaUrl: { type: String },  
+    timeStamp: { type: Date, default: Date.now },  
+});
+const userSchema = new mongoose.Schema({    
+    username: { type: String, required: true, unique:true },  
+    password: { type: String, required: true }, 
+    token:{type:String},
+    contacts:{type:Array}
+});   
+const userDatabase = mongoose.model("users",userSchema);
+const msgDatabase = mongoose.model("msg", msgSchema);  
+
+
+// Getting the messages(token,recipientId)
+app.post("/getmsgs", async (req, res) => {  
+    try {  
+        const token = req.body.token;
+        jwt.verify(token,'secret',async(err,decoded)=>{
+            if(err){
+                return res.status(404).send(err);
+            }
+            const user = await userDatabase.findOne({"token":token});
+            const user2 = await userDatabase.findOne({"username":req.body.recipientId});
+            if(!user2){
+                return res.sendStatus(404);
+            }
+            const msgs = await msgDatabase.find({ "senderId": user.username, "recipientId": req.body.recipientId });
+            const msgs2 = await msgDatabase.find({"senderId":req.body.recipientId,"recipientId":user.username})
+            return res.json([...msgs,...msgs2]);  
+        })
+
+    } catch (err) {  
+        res.status(404).send(err);  
+    }  
+});  
+
+// Adding new message(token,recipientId,content,media)
+// 'media' is the key that the file should be sent in  
+app.post("/addmsgs", upload.single("media"), async (req, res) => {  
+    try {
+        const token = req.body.token;
+        jwt.verify(token,'secret',async(err,decoded)=>{
+            if(err){
+                return res.send(err)
+            }
+            const user = await userDatabase.findOne({"token":token});
+            const user2 = await userDatabase.findOne({"username":req.body.recipientId});
+            if(!user2){
+                return res.sendStatus(404);
+            }
+            const newMsg = new msgDatabase({  
+                senderId: user.username,
+                recipientId: req.body.recipientId,  
+                content: req.body.content,  
+                mediaUrl: req.file ? `http://localhost:3000/uploads/${req.file.filename}` : null
+            });  
+            await newMsg.save();
+            
+            if(!user.contacts.includes(req.body.recipientId)){
+                await userDatabase.updateOne({"token":token},{$set:{contacts:[...user.contacts,req.body.recipientId]}})
+            }
+            return res.sendStatus(200); 
+        })
+
+    } catch (err) {  
+        return res.send(err);  
+    }  
+});
+
+//(username,password)
+app.post('/signin', async(req,res)=>{
+    const newUser = new userDatabase(req.body);
+    await newUser.save();
+    res.sendStatus(200);
+})
+
+//(username,password)
+app.post("/login", async(req,res)=>{
+    const user = await userDatabase.findOne({"username":req.body.username,"password":req.body.password});
+    if(user){
+        const token = jwt.sign({userId:user._id},'secret',{expiresIn:"1h"});
+
+        await userDatabase.updateOne({"username":req.body.username,"password":req.body.password},{$set:{"token":token}})
+        return res.send({
+            "token":token,
+            "username":req.body.username,
+            "contacts":user.contacts
         });
-      }, 500);
-    </script>
-    <style>
-      @import url("https://p.typekit.net/p.css?s=1&k=vnd5zic&ht=tk&f=39475.39476.39477.39478.39479.39480.39481.39482&a=18673890&app=typekit&e=css");
-      @font-face {
-        font-family: "neo-sans";
-        src: url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff2"), url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/d?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff"), url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/a?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("opentype");
-        font-style: normal;
-        font-weight: 700;
-      }
-      html {
-        font-family: neo-sans;
-        font-weight: 700;
-        font-size: calc(62rem / 16);
-      }
-      body {
-        background: white;
-      }
-      section {
-        border-radius: 1em;
-        padding: 1em;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        margin-right: -50%;
-        transform: translate(-50%, -50%);
-      }
-    </style>
-  </head>
-  <body>
-    <section>
-      Hello from Render!
-    </section>
-  </body>
-</html>
-`
+    }
+    return res.send("fail");
+})
