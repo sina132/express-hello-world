@@ -15,7 +15,7 @@
     "cors": "^2.x.x",  
     "multer": "^1.x.x",  
     "mongoose": "^6.x.x",  
-    "jsonwebtoken": "^8.x.x" // Add appropriate versions  
+    "jsonwebtoken": "^8.x.x"
   } 
   },
   "engines": {
